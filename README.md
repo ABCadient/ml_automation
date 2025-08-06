@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # ML Automation App
 
 A comprehensive Streamlit-based machine learning automation tool that provides end-to-end ML workflow automation with advanced features for model comparison, explanation, and management.
@@ -197,3 +198,7 @@ This project is licensed under the MIT License.
 - Built with [Streamlit](https://streamlit.io/)
 - ML algorithms from [Scikit-learn](https://scikit-learn.org/)
 - Model explanations with [SHAP](https://github.com/slundberg/shap) and [LIME](https://github.com/marcotcr/lime) 
+=======
+# ml_automation
+This app automated the ML related tasks and steps.
+>>>>>>> caf8d25a67c729935dcff5d9f5e2cf80dced3482
