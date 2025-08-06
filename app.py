@@ -4,7 +4,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression, LinearRegression
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, ExtraTreesClassifier, RandomForestRegressor, GradientBoostingRegressor
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, ExtraTreesClassifier, RandomForestRegressor, GradientBoostingRegressor, ExtraTreesRegressor
 from sklearn.svm import SVC, SVR
 import xgboost as xgb
 import lightgbm as lgb
