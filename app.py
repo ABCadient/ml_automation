@@ -413,16 +413,14 @@ class MLComparison:
         print(df.isna().sum())
         
         # Clean state values
-        df['State'] = df['State'].apply(self.clean_state)
+        if 'State' in df.columns:
+            df['State'] = df['State'].apply(self.clean_state)
         if 'WorkHistoryState' in df.columns:
             df['WorkHistoryState'] = df['WorkHistoryState'].apply(self.clean_state)
         
-        # Identify numeric and categorical columns
-        numeric_columns = ['WorkHistoryDays', 'EducationCount', 'WorkHistoryCount', 
-                        'ReferenceCount', 'Distance', 'AvailabilityAfterDays']
-        
-        categorical_columns = ['WorkPreference', 'State', 'SourceCategory',
-                            'JobCategory', 'ReasonForLeaving']
+        # Automatically identify numeric and categorical columns
+        numeric_columns = df.select_dtypes(include=[np.number]).columns.tolist()
+        categorical_columns = df.select_dtypes(include=['object', 'string']).columns.tolist()
         
         # Handle numeric columns
         for col in numeric_columns:
@@ -434,42 +432,50 @@ class MLComparison:
                 df[col] = df[col].fillna(median_value)
         
         # Handle categorical columns
+        encoders = {}
         for col in categorical_columns:
             if col in df.columns:
                 # Fill NaN with 'Missing' for categorical columns
                 df[col] = df[col].fillna('Missing')
-        
-        # Create label encoders for categorical columns
-        encoders = {}
-        for col in categorical_columns:
-            if col in df.columns:
+                # Encode categorical variables
                 le = LabelEncoder()
                 df[col] = le.fit_transform(df[col].astype(str))
                 encoders[col] = le
         
-        # Feature engineering
-        # Binary flag for missing work history
-        df['has_work_history'] = (df['WorkHistoryDays'] > 0).astype(int)
+        # Feature engineering (only for specific columns if they exist)
+        if 'WorkHistoryDays' in df.columns:
+            # Binary flag for missing work history
+            df['has_work_history'] = (df['WorkHistoryDays'] > 0).astype(int)
         
-        # Ratio of education to work history (avoiding division by zero)
-        df['edu_work_ratio'] = df['EducationCount'] / (df['WorkHistoryCount'] + 1)
+        if 'EducationCount' in df.columns and 'WorkHistoryCount' in df.columns:
+            # Ratio of education to work history (avoiding division by zero)
+            df['edu_work_ratio'] = df['EducationCount'] / (df['WorkHistoryCount'] + 1)
         
-        # Distance categories (with proper NaN handling)
-        df['distance_category'] = pd.qcut(
-            df['Distance'].fillna(df['Distance'].median()), 
-            q=3, 
-            labels=[0, 1, 2], 
-            duplicates='drop'
-        ).astype(float)  # Convert to float to handle NaN
+        if 'Distance' in df.columns:
+            # Distance categories (with proper NaN handling)
+            try:
+                df['distance_category'] = pd.qcut(
+                    df['Distance'].fillna(df['Distance'].median()), 
+                    q=3, 
+                    labels=[0, 1, 2], 
+                    duplicates='drop'
+                ).astype(float)  # Convert to float to handle NaN
+            except:
+                # If qcut fails, create simple categories
+                df['distance_category'] = pd.cut(
+                    df['Distance'].fillna(df['Distance'].median()), 
+                    bins=3, 
+                    labels=[0, 1, 2]
+                ).astype(float)
         
-        # Binary flags
-        df['is_currently_employed'] = df['IsCurrentlyEmployed'].fillna(0).astype(int)
+        # Binary flags for employment status
+        if 'IsCurrentlyEmployed' in df.columns:
+            df['is_currently_employed'] = df['IsCurrentlyEmployed'].fillna(0).astype(int)
         if 'IsFormerEmployee' in df.columns:
             df['IsFormerEmployee'] = df['IsFormerEmployee'].fillna(0).astype(int)
 
         # Add threshold days calculation if provided
-        if threshold_days is not None:
-            # df['long_tenure'] = (df['WorkHistoryDays'] >= threshold_days).astype(int)
+        if threshold_days is not None and 'Tenure_orig' in df.columns:
             df.loc[df['Tenure_orig']<=90, 'BinTenure'] = 0
             df.loc[df['Tenure_orig']>90, 'BinTenure'] = 1
             df.dropna(subset=['BinTenure'], inplace=True)
@@ -477,6 +483,12 @@ class MLComparison:
         # Drop unnecessary columns
         columns_to_drop = ['WorkHistoryState', 'Tenure_orig']
         df = df.drop(columns=[col for col in columns_to_drop if col in df.columns], errors='ignore')
+        
+        # Ensure all remaining columns are numeric
+        for col in df.columns:
+            if df[col].dtype == 'object':
+                # Convert any remaining object columns to numeric
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0)
         
         # Print final NaN counts
         print("\nFinal NaN counts:")
